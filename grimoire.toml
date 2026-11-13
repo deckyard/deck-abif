@@ -1,0 +1,33 @@
+# Grimoire book configuration for the @deckyard/abif documentation.
+
+[book]
+title = "@deckyard/abif"
+description = "Read Applied Biosystems ABIF files: Sanger traces (.ab1), fragment-analysis runs (.fsa) and 3500 HID runs (.hid); every element type, raw and analysed traces, dyes, base calls, qualities, peak locations and run metadata"
+language = "en"
+src = "docs"
+
+[build]
+out = "site"
+clean = true
+jobs = 0
+
+[html]
+theme = "orchid"
+mode = "auto"
+navPosition = "left"
+tocPosition = "right"
+tocDepth = 3
+sectionNumbers = true
+titleUrl = "https://deckyard.github.io/deck-abif/"
+repoUrl = "https://github.com/deckyard/deck-abif"
+repoLabel = "Source"
+editUrl = "https://github.com/deckyard/deck-abif/edit/main/docs/{path}"
+
+[highlight]
+enabled = true
+
+[search]
+enabled = true
+
+[pdf]
+enabled = false

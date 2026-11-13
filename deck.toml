@@ -1,0 +1,25 @@
+[package]
+name = "@deckyard/abif"
+version = "0.1.0"
+description = "Read Applied Biosystems ABIF files: Sanger traces (.ab1), fragment-analysis runs (.fsa) and 3500 HID runs (.hid); every element type, raw and analysed traces, dyes, base calls, qualities, peak locations and run metadata"
+license = "LGPL-3.0-only"
+authors = ["mplx <mplx@jennifer-lang.dev>"]
+capabilities = []
+keywords = [
+    "abif",
+    "ab1",
+    "fsa",
+    "sanger",
+    "capillary-electrophoresis",
+    "chromatogram",
+    "fragment-analysis",
+    "bioinformatics",
+]
+
+[package.urls]
+deck = "https://raw.githubusercontent.com/deckyard/deck-abif/main/deck.toml"
+homepage = "https://github.com/deckyard/deck-abif"
+manual = "https://deckyard.github.io/deck-abif/"
+
+[engines]
+jennifer = ">=0.26.0"
