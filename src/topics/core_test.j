@@ -275,9 +275,13 @@ func testTheDirectoryIsChecked() {
     refused($b, "the header's directory entry is malformed");
     refused(put(sampleFile(), 16, 27, 2), "the header's directory entry is malformed");
     refused(put(sampleFile(), 18, 4, 4), "the header's directory entry is malformed");
-    refused(
-        put(put(sampleFile(), 18, MAX_ENTRIES + 1, 4), 22, 28 * (MAX_ENTRIES + 1), 4),
-        "65537 directory entries");
+    try {
+        parse(put(put(sampleFile(), 18, MAX_ENTRIES + 1, 4), 22, 28 * (MAX_ENTRIES + 1), 4));
+        missed("too many entries");
+    } catch (e) {
+        testing.assertEqual($e.kind, "limit");
+        testing.assertEqual($e.message, "abif: 65537 directory entries, more than 65536");
+    }
     refused(
         put(put(sampleFile(), 18, 4, 4), 22, 112, 4),
         "the directory runs past the end of the file");

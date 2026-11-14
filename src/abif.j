@@ -22,7 +22,8 @@
  * which are encrypted; they read as `Value.Raw`, and the trace readers
  * refuse them. Its sample and run metadata read as usual.
  *
- * Every failure is `Error{kind: "abif"}`.
+ * Every failure is `Error{kind: "abif"}`, except a directory with more than
+ * `MAX_ENTRIES` entries, which is kind `"limit"`.
  *
  * | topic | covers |
  * | --- | --- |

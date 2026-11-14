@@ -101,7 +101,7 @@ func fail(message as string) {
  *
  * @param data {bytes} the file
  * @return {File} the file with its directory
- * @throws {Error} kind "abif" when the bytes are no ABIF file or the directory does not fit them
+ * @throws {Error} kind "abif" when the bytes are no ABIF file or the directory does not fit them; kind "limit" for more than `MAX_ENTRIES` entries
  * @example
  *   def f as abif.File init abif.parse(fs.readBytes("run.fsa"));
  */
@@ -129,7 +129,10 @@ export func parse(data as bytes) {
         fail("the header's directory entry is malformed");
     }
     if ($count > MAX_ENTRIES) {
-        fail(io.sprintf("%d directory entries, more than %d", $count, MAX_ENTRIES));
+        throw Error{
+            kind: "limit",
+            message: io.sprintf("abif: %d directory entries, more than %d", $count, MAX_ENTRIES)
+        };
     }
     if ($count > 0 and $at < HEADER_SIZE) {
         fail("the directory overlaps the header");

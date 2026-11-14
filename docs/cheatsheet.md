@@ -10,8 +10,8 @@ Every export of `@deckyard/abif`. Guides are listed in
 import "@deckyard/abif/" as abif;
 ```
 
-Every failure is `Error{kind: "abif"}`, except that `open` passes on what
-`fs.readBytes` throws. An `f` argument is a `File`; a tag is a `name` (four
+Every failure is `Error{kind: "abif"}`, except a directory over `MAX_ENTRIES`
+(kind `"limit"`) and what `fs.readBytes` throws in `open`. An `f` argument is a `File`; a tag is a `name` (four
 characters, such as `DATA`) and a `number`.
 
 ## Constants

@@ -33,7 +33,8 @@ io.printf("%s: %d bases\n", abif.info($f).sample, len(abif.calls($f).bases));
 Input that breaks the format is an error, never repaired: `parse` checks the
 header and every directory entry against the file before anything is read,
 and a string tag that is malformed or not UTF-8 is refused. Every failure is
-`Error{kind: "abif"}`, except what `fs.readBytes` throws in `open`:
+`Error{kind: "abif"}`, except a directory over `MAX_ENTRIES` (kind `"limit"`)
+and what `fs.readBytes` throws in `open`:
 
 ```jennifer
 try {
