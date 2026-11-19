@@ -15,3 +15,4 @@
 - [The three file types](files.md)
 - [The format](format.md)
 - [Cheatsheet](cheatsheet.md)
+- [Design](design.md)
