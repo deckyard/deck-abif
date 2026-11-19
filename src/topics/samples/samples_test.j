@@ -282,8 +282,6 @@ func testATruncatedFile() {
         open("testdata/fake.ab1");
         missed("fake.ab1");
     } catch (e) {
-        testing.assertEqual(
-            $e.message,
-            "abif: not an ABIF file: 26 bytes, the header alone is 128");
+        testing.assertEqual($e.message, "not an ABIF file: 26 bytes, the header alone is 128");
     }
 }

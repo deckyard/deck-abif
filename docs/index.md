@@ -40,7 +40,7 @@ and what `fs.readBytes` throws in `open`:
 try {
     def f as abif.File init abif.open($path);
 } catch (e) {
-    io.printf("%s\n", $e.message);
+    io.printf("%s: %s\n", $e.kind, $e.message);
 }
 ```
 

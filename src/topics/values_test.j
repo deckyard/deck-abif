@@ -173,7 +173,7 @@ func testTheTypedReaders() {
     } catch (e) {
         testing.assertEqual(
             $e.message,
-            "abif: SHRT 1 holds short elements (type 4), not text (char, pString or cString)");
+            "SHRT 1 holds short elements (type 4), not text (char, pString or cString)");
     }
     try {
         ints($f, "FLOT", 1);
@@ -187,7 +187,7 @@ func testTheTypedReaders() {
     } catch (e) {
         testing.assertEqual(
             $e.message,
-            "abif: DATA 1 holds unknown elements (type 28) (3500 HID files encrypt these), not floats (float or double)");
+            "DATA 1 holds unknown elements (type 28) (3500 HID files encrypt these), not floats (float or double)");
     }
 }
 
@@ -257,7 +257,7 @@ func testMalformedStringsAreRefused() {
         tag($f, "NANF", 1);
         missed("NaN");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: NANF 1 holds a value that is not a finite number");
+        testing.assertEqual($e.message, "NANF 1 holds a value that is not a finite number");
     }
 }
 
@@ -274,9 +274,7 @@ func testAnEmptyCStringIsRefused() {
             }
             missed("an empty cString");
         } catch (e) {
-            testing.assertEqual(
-                $e.message,
-                "abif: CEMP 1: a cString that does not end at its only NUL");
+            testing.assertEqual($e.message, "CEMP 1: a cString that does not end at its only NUL");
         }
     }
 }

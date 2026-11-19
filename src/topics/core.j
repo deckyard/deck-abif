@@ -87,11 +87,14 @@ export def struct File {
 /**
  * Throw an abif error.
  *
- * @param message {string} what went wrong, without the `abif: ` prefix
+ * The message carries no `abif: ` prefix: the kind already says where the
+ * error comes from.
+ *
+ * @param message {string} what went wrong
  * @throws {Error} kind "abif", always
  */
 func fail(message as string) {
-    throw Error{kind: "abif", message: "abif: " + $message};
+    throw Error{kind: "abif", message: $message};
 }
 
 /**
@@ -131,7 +134,7 @@ export func parse(data as bytes) {
     if ($count > MAX_ENTRIES) {
         throw Error{
             kind: "limit",
-            message: io.sprintf("abif: %d directory entries, more than %d", $count, MAX_ENTRIES)
+            message: io.sprintf("%d directory entries, more than %d", $count, MAX_ENTRIES)
         };
     }
     if ($count > 0 and $at < HEADER_SIZE) {

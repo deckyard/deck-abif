@@ -280,7 +280,7 @@ func testTheDirectoryIsChecked() {
         missed("too many entries");
     } catch (e) {
         testing.assertEqual($e.kind, "limit");
-        testing.assertEqual($e.message, "abif: 65537 directory entries, more than 65536");
+        testing.assertEqual($e.message, "65537 directory entries, more than 65536");
     }
     refused(
         put(put(sampleFile(), 18, 4, 4), 22, 112, 4),
@@ -318,13 +318,13 @@ func testEntryNamesWhatIsMissing() {
         raw($f, "PBAS", 2);
         missed("PBAS 2");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: the file has no PBAS 2");
+        testing.assertEqual($e.message, "the file has no PBAS 2");
     }
     try {
         entry($f, "DAT", 1);
         missed("DAT");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: a tag name is four characters, got 3");
+        testing.assertEqual($e.message, "a tag name is four characters, got 3");
     }
 }
 
@@ -353,7 +353,7 @@ func testLookupsTakeFourCharacterNames() {
         entry($f, "DATA1", 0);
         missed("DATA1 0");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: a tag name is four characters, got 5");
+        testing.assertEqual($e.message, "a tag name is four characters, got 5");
     }
     testing.assertEqual(entry($f, "ZERO", 0).count, 1);
 }

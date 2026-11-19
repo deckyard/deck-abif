@@ -55,7 +55,7 @@ func testTracesByDye() {
         rawTrace($f, 6);
         missed("dye 6");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: the file has no DATA 106");
+        testing.assertEqual($e.message, "the file has no DATA 106");
     }
 }
 
@@ -77,7 +77,7 @@ func testAnEncryptedTraceIsRefused() {
     } catch (e) {
         testing.assertEqual(
             $e.message,
-            "abif: DATA 1 holds unknown elements (type 28) (3500 HID files encrypt these), not a trace (short)");
+            "DATA 1 holds unknown elements (type 28) (3500 HID files encrypt these), not a trace (short)");
     }
 }
 
@@ -100,7 +100,7 @@ func testDyes() {
         dyes(parse(build(101, [shortTag("Dye#", 1, [100])])));
         missed("100 dyes");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: Dye# 1 is not one number from 0 to 99");
+        testing.assertEqual($e.message, "Dye# 1 is not one number from 0 to 99");
     }
 }
 
@@ -165,7 +165,7 @@ func testCallsAreChecked() {
     } catch (e) {
         testing.assertEqual(
             $e.message,
-            "abif: the file has no base calls (PBAS 2); is it a fragment run?");
+            "the file has no base calls (PBAS 2); is it a fragment run?");
     }
     try {
         calls(parse(build(
@@ -182,13 +182,13 @@ func testCallsAreChecked() {
             ])));
         missed("short PCON");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: PCON 2 has 3 qualities for 4 bases");
+        testing.assertEqual($e.message, "PCON 2 has 3 qualities for 4 bases");
     }
     try {
         calls(parse(build(101, [$bases, shortTag("PLOC", 2, [1, 2, 3, 4, 5])])));
         missed("long PLOC");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: PLOC 2 has 5 peak locations for 4 bases");
+        testing.assertEqual($e.message, "PLOC 2 has 5 peak locations for 4 bases");
     }
 }
 
@@ -285,7 +285,7 @@ func testNumbersStoredOtherwiseReadAsZero() {
         dyes(parse(build(101, [pTag("Dye#", 1, "4")])));
         missed("Dye# as text");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: Dye# 1 is not one number from 0 to 99");
+        testing.assertEqual($e.message, "Dye# 1 is not one number from 0 to 99");
     }
 }
 
@@ -312,6 +312,6 @@ func testCallsCountBasesInBytes() {
             ])));
         missed("one quality for two bytes");
     } catch (e) {
-        testing.assertEqual($e.message, "abif: PCON 2 has 1 qualities for 2 bases");
+        testing.assertEqual($e.message, "PCON 2 has 1 qualities for 2 bases");
     }
 }
