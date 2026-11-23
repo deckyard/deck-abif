@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # abif - white-box tests for the core topic, and the builder of synthetic
 # ABIF files the other overlays use. Spliced into abif_test.j via include.
@@ -84,7 +84,7 @@ func bytesOf(values as list of int) {
  * @return {bytes} its UTF-8
  */
 func utf(s as string) {
-    return convert.bytesFromString("utf-8", $s);
+    return encoding.encode("utf-8", $s);
 }
 
 /**

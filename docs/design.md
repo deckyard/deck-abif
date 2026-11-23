@@ -139,9 +139,10 @@ Biopython's expected values; it returns early when `testdata/` is missing.
 
 ## Dependencies on the interpreter
 
-- The floor is `>=0.26.0`, for the `binary` number readers
-  (`binary.readInt`, `binary.readUint`, and the bulk `binary.readInts` and
-  `binary.readFloats`).
+- The floor is `>=0.27.0`, for the UTF-8 codecs of `encoding.encode` /
+  `decode`. The `binary` number readers (`binary.readInt`,
+  `binary.readUint`, and the bulk `binary.readInts` and `binary.readFloats`)
+  came with 0.26.0.
 - Kind `"limit"` for a reached cap follows the error conventions of
   `jennifer` (M28.54, M28.57).
 - No capability; the deck uses `fs` only in `open`.

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # abif - core: the header, the directory and its checks, and finding an
 # entry. Spliced into abif.j via include.
@@ -112,7 +112,7 @@ export func parse(data as bytes) {
     if (len($data) < HEADER_SIZE) {
         fail(io.sprintf("not an ABIF file: %d bytes, the header alone is 128", len($data)));
     }
-    if (not binary.startsWith($data, convert.bytesFromString("utf-8", "ABIF"))) {
+    if (not binary.startsWith($data, encoding.encode("utf-8", "ABIF"))) {
         fail("not an ABIF file: it does not start with \"ABIF\"");
     }
     def version as int init binary.readUint("be", $data, 4, 2);
@@ -125,7 +125,7 @@ export func parse(data as bytes) {
     def count as int init binary.readInt("be", $data, 18, 4);
     def reserved as int init binary.readInt("be", $data, 22, 4);
     def at as int init binary.readInt("be", $data, 26, 4);
-    if (not binary.startsWith(binary.slice($data, 6, 10), convert.bytesFromString("utf-8", "tdir")) or
+    if (not binary.startsWith($data[6..10], encoding.encode("utf-8", "tdir")) or
         binary.readInt("be", $data, 10, 4) != 1 or binary.readInt("be", $data, 14, 2) != 1023 or
         binary.readInt("be", $data, 16, 2) != ENTRY_SIZE or $count < 0 or
         $reserved < $count * ENTRY_SIZE) {
@@ -201,7 +201,7 @@ func readEntry(data as bytes, at as int, size as int) {
         }
     }
     def e as Entry init Entry{
-        name: convert.stringFromBytes("utf-8", binary.slice($data, $at, $at + 4)),
+        name: encoding.decode("utf-8", $data[$at..$at + 4]),
         number: binary.readInt("be", $data, $at + 4, 4),
         elementType: binary.readInt("be", $data, $at + 8, 2),
         elementSize: binary.readInt("be", $data, $at + 10, 2),
@@ -338,5 +338,5 @@ export func entry(f as File, name as string, number as int) {
  */
 export func raw(f as File, name as string, number as int) {
     def e as Entry init entry($f, $name, $number);
-    return binary.slice($f.data, $e.offset, $e.offset + $e.dataSize);
+    return $f.data[$e.offset..$e.offset + $e.dataSize];
 }

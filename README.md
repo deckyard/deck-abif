@@ -34,7 +34,7 @@ io.printf("%s (%s): %d bases\n", $i.sample, $i.well, len($c.bases));
 
 ## Requirements
 
-Jennifer 0.26.0 or newer. No capabilities.
+Jennifer 0.27.0 or newer. No capabilities.
 
 The traces, peak tables and most dye names of a 3500 HID file are encrypted;
 the deck reads that file's metadata, not its signal.

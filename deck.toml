@@ -22,4 +22,4 @@ homepage = "https://github.com/deckyard/deck-abif"
 manual = "https://deckyard.github.io/deck-abif/"
 
 [engines]
-jennifer = ">=0.26.0"
+jennifer = ">=0.27.0"

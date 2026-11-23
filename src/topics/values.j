@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-only
 # SPDX-FileCopyrightText: Copyright (C) 2026 mplx <mplx@jennifer-lang.dev>
-# pragma-jennifer-version: >=0.26.0
+# pragma-jennifer-version: >=0.27.0
 
 # abif - values: the element types, decoding a tag into a Value, and the
 # typed readers text, ints and floats. Spliced into abif.j via include.
@@ -277,7 +277,7 @@ func mismatch(e as Entry, wanted as string) {
  * @return {bytes} its data
  */
 func dataOf(f as File, e as Entry) {
-    return binary.slice($f.data, $e.offset, $e.offset + $e.dataSize);
+    return $f.data[$e.offset..$e.offset + $e.dataSize];
 }
 
 /**
@@ -331,13 +331,13 @@ func textOf(f as File, e as Entry) {
                 $e.number,
                 len($d)));
         }
-        return utf8($e, binary.slice($d, 1));
+        return utf8($e, $d[1..]);
     }
     def nul as int init binary.indexOf($d, binary.make(1));
     if (len($d) == 0 or $nul != len($d) - 1) {
         fail(io.sprintf("%s %d: a cString that does not end at its only NUL", $e.name, $e.number));
     }
-    return utf8($e, binary.slice($d, 0, $nul));
+    return utf8($e, $d[..$nul]);
 }
 
 /**
@@ -349,7 +349,7 @@ func textOf(f as File, e as Entry) {
  */
 func utf8(e as Entry, d as bytes) {
     try {
-        return convert.stringFromBytes("utf-8", $d);
+        return encoding.decode("utf-8", $d);
     } catch (err) {
         fail(io.sprintf("%s %d is not UTF-8 text; read its bytes with raw", $e.name, $e.number));
     }
