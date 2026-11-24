@@ -70,6 +70,7 @@ export def struct Entry {
  * @field offsets {list of int} each entry's data offset in the file
  * @field index {map of string to int} the position of each tag in those lists, keyed `NAME` + number (`DATA9`)
  * @field data {bytes} the whole file
+ * @field issues {list of string} the rules a leniently parsed file breaks, one message per broken rule (`parseWith`); empty for a strictly parsed file
  */
 export def struct File {
     version as int,
@@ -81,7 +82,17 @@ export def struct File {
     dataSizes as list of int,
     offsets as list of int,
     index as map of string to int,
-    data as bytes
+    data as bytes,
+    issues as list of string
+};
+
+/**
+ * How `parseWith` reads a file.
+ *
+ * @field lenient {bool} accept entries that break the format's rules (an element type or size below 1, an element size its type does not have, a data size that is not count x element size, a repeated tag, a tag name with bytes over 126) and list them in `File.issues` instead of refusing the file; GeneScan and Data Collection documents of the ABI PRISM 310 era and some 1990s sample files need it
+ */
+export def struct ParseOptions {
+    lenient as bool
 };
 
 /**
@@ -109,6 +120,28 @@ func fail(message as string) {
  *   def f as abif.File init abif.parse(fs.readBytes("run.fsa"));
  */
 export func parse(data as bytes) {
+    return parseWith($data, ParseOptions{lenient: false});
+}
+
+/**
+ * Parse an ABIF file with options. A lenient parse still refuses what it
+ * cannot read safely - a bad header, an unreadable tag name, a negative
+ * number, data outside the file - but accepts entries that break the
+ * format's other rules and lists each break in `File.issues`. The typed
+ * readers refuse an irregular entry (its count, size and type disagree);
+ * `raw` reads its bytes, `text` its text.
+ *
+ * @param data {bytes} the file
+ * @param opts {ParseOptions} the options
+ * @return {File} the file with its directory
+ * @throws {Error} kind "abif" when the bytes are no ABIF file or the directory does not fit them; kind "limit" for more than `MAX_ENTRIES` entries
+ * @example
+ *   def f as abif.File init abif.parseWith(fs.readBytes("SS-280100"), abif.ParseOptions{lenient: true});
+ *   for (def issue in $f.issues) {
+ *       io.printf("%s\n", $issue);
+ *   }
+ */
+export func parseWith(data as bytes, opts as ParseOptions) {
     if (len($data) < HEADER_SIZE) {
         fail(io.sprintf("not an ABIF file: %d bytes, the header alone is 128", len($data)));
     }
@@ -150,13 +183,28 @@ export func parse(data as bytes) {
         dataSizes: [],
         offsets: [],
         index: {},
-        data: $data
+        data: $data,
+        issues: []
     };
     for (def i in 0..$count) {
-        def e as Entry init readEntry($data, $at + $i * ENTRY_SIZE, len($data));
+        def e as Entry init readEntry($data, $at + $i * ENTRY_SIZE, len($data), $opts.lenient);
         def key as string init $e.name + convert.toString($e.number);
         if (maps.has($f.index, $key)) {
-            fail(io.sprintf("%s %d appears twice in the directory", $e.name, $e.number));
+            def twice as string init io.sprintf(
+                "%s %d appears twice in the directory",
+                $e.name,
+                $e.number);
+            if (not $opts.lenient) {
+                fail($twice);
+            }
+            # the first one stays reachable; the repeat is listed, not indexed
+            $f.issues[] = $twice + "; the first is used";
+            continue;
+        }
+        if ($opts.lenient) {
+            for (def issue in ruleBreaks($e)) {
+                $f.issues[] = $issue;
+            }
         }
         $f.index[$key] = $i;
         $f.names[] = $e.name;
@@ -182,26 +230,43 @@ export func open(path as string) {
 }
 
 /**
+ * Read and parse an ABIF file with options (see `parseWith`).
+ *
+ * @param path {string} the file
+ * @param opts {ParseOptions} the options
+ * @return {File} the file with its directory
+ * @throws {Error} kind "abif" when the file is no ABIF file; reading it can throw as `fs.readBytes` does
+ */
+export func openWith(path as string, opts as ParseOptions) {
+    return parseWith(fs.readBytes($path), $opts);
+}
+
+/**
  * Read and check the directory entry at `at`.
  *
  * @param data {bytes} the file
  * @param at {int} where the entry starts
  * @param size {int} the file's length
+ * @param lenient {bool} let the rules of `ruleBreaks` pass
  * @return {Entry} the entry, `offset` made absolute for inline data
  */
-func readEntry(data as bytes, at as int, size as int) {
+func readEntry(data as bytes, at as int, size as int, lenient as bool) {
     if ($at + ENTRY_SIZE > $size) {
         fail("the directory runs past the end of the file");
     }
+    # control characters never; bytes over 126 (Mac OS Roman letters in
+    # 310-era injection lists: S\x88Pr) only leniently, read byte for byte as
+    # ISO 8859-1 so every name stays distinct
     for (def i in 0..4) {
-        if ($data[$at + $i] < 32 or $data[$at + $i] > 126) {
+        def c as int init $data[$at + $i];
+        if ($c < 32 or $c == 127 or ($c > 126 and not $lenient)) {
             fail(io.sprintf(
                 "the directory entry at byte %d has a tag name that is not printable ASCII",
                 $at));
         }
     }
     def e as Entry init Entry{
-        name: encoding.decode("utf-8", $data[$at..$at + 4]),
+        name: encoding.decode("iso-8859-1", $data[$at..$at + 4]),
         number: binary.readInt("be", $data, $at + 4, 4),
         elementType: binary.readInt("be", $data, $at + 8, 2),
         elementSize: binary.readInt("be", $data, $at + 10, 2),
@@ -210,24 +275,19 @@ func readEntry(data as bytes, at as int, size as int) {
         offset: binary.readInt("be", $data, $at + 20, 4)
     };
     def what as string init io.sprintf("%s %d", $e.name, $e.number);
-    if ($e.number < 0 or $e.elementType < 1 or $e.elementSize < 1 or $e.count < 0) {
+    def typeOrSize as bool init $e.elementType < 1 or $e.elementSize < 1;
+    if ($e.number < 0 or $e.count < 0 or ($typeOrSize and not $lenient)) {
         fail($what + ": a negative number, or a type or element size below 1");
     }
-    if (maps.has(ELEMENT_SIZES, $e.elementType) and $e.elementSize != ELEMENT_SIZES[$e.elementType]) {
-        fail(io.sprintf(
-            "%s: element type %d has %d-byte elements, not %d",
-            $what,
-            $e.elementType,
-            ELEMENT_SIZES[$e.elementType],
-            $e.elementSize));
+    # strictly, a negative size fails the size rule below, with its message
+    if ($lenient and $e.dataSize < 0) {
+        fail($what + ": a negative data size");
     }
-    if ($e.dataSize != $e.count * $e.elementSize) {
-        fail(io.sprintf(
-            "%s: %d bytes of data for %d elements of %d bytes",
-            $what,
-            $e.dataSize,
-            $e.count,
-            $e.elementSize));
+    if (not $lenient) {
+        def breaks as list of string init ruleBreaks($e);
+        if (len($breaks) > 0) {
+            fail($breaks[0]);
+        }
     }
     if ($e.dataSize <= 4) {
         $e.offset = $at + 20;
@@ -239,6 +299,70 @@ func readEntry(data as bytes, at as int, size as int) {
             $e.offset));
     }
     return $e;
+}
+
+/**
+ * The format rules an entry breaks, in the order a strict parse checks them.
+ *
+ * @param e {Entry} the entry
+ * @return {list of string} one message per broken rule, empty for a regular entry
+ */
+func ruleBreaks(e as Entry) {
+    def what as string init io.sprintf("%s %d", $e.name, $e.number);
+    def out as list of string init [];
+    for (def i in 0..len($e.name)) {
+        if (convert.toCodepoint($e.name[$i..$i + 1]) > 126) {
+            $out[] = $what + ": a tag name that is not printable ASCII (read as ISO 8859-1)";
+            break;
+        }
+    }
+    for (def b in structureBreaks($e)) {
+        $out[] = $b;
+    }
+    return $out;
+}
+
+/**
+ * The rules on an entry's shape it breaks: what makes its elements unsafe
+ * to read (its name does not matter here).
+ *
+ * @param e {Entry} the entry
+ * @return {list of string} one message per broken rule
+ */
+func structureBreaks(e as Entry) {
+    def what as string init io.sprintf("%s %d", $e.name, $e.number);
+    def out as list of string init [];
+    if ($e.elementType < 1 or $e.elementSize < 1) {
+        $out[] = $what + ": a negative number, or a type or element size below 1";
+    }
+    if (maps.has(ELEMENT_SIZES, $e.elementType) and $e.elementSize != ELEMENT_SIZES[$e.elementType]) {
+        $out[] = io.sprintf(
+            "%s: element type %d has %d-byte elements, not %d",
+            $what,
+            $e.elementType,
+            ELEMENT_SIZES[$e.elementType],
+            $e.elementSize);
+    }
+    if ($e.dataSize != $e.count * $e.elementSize) {
+        $out[] = io.sprintf(
+            "%s: %d bytes of data for %d elements of %d bytes",
+            $what,
+            $e.dataSize,
+            $e.count,
+            $e.elementSize);
+    }
+    return $out;
+}
+
+/**
+ * Whether an entry keeps the format's rules: what every entry of a strictly
+ * parsed file does. Only a lenient parse admits irregular ones.
+ *
+ * @param e {Entry} the entry
+ * @return {bool} true for a regular entry
+ */
+func regular(e as Entry) {
+    return len(structureBreaks($e)) == 0;
 }
 
 /**

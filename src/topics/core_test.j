@@ -357,3 +357,129 @@ func testLookupsTakeFourCharacterNames() {
     }
     testing.assertEqual(entry($f, "ZERO", 0).count, 1);
 }
+
+/**
+ * A file parsed leniently.
+ *
+ * @param b {bytes} the file
+ * @return {File} the file
+ */
+func lenient(b as bytes) {
+    return parseWith($b, ParseOptions{lenient: true});
+}
+
+/**
+ * Assert that even a lenient parse refuses bytes, with an abif error naming `want`.
+ *
+ * @param b {bytes} the file
+ * @param want {string} part of the message
+ */
+func refusedLeniently(b as bytes, want as string) {
+    try {
+        lenient($b);
+        missed($want);
+    } catch (e) {
+        testing.assertEqual($e.kind, "abif");
+        testing.assertContains($e.message, $want);
+    }
+}
+
+/**
+ * The file of the lenient tests: a regular DATA 1, a PLst 5 whose element
+ * size is 0 (as in GeneScan projects) and a NAME 1 of 0 elements holding 10
+ * bytes (as in 310 sample sheets).
+ *
+ * @return {bytes} the file
+ */
+func bentFile() {
+    def b as bytes init build(
+        101,
+        [
+            shortTag("DATA", 1, [1, 2, 3]),
+            pTag("PLst", 5, "abc"),
+            TestTag{
+                name: "NAME",
+                number: 1,
+                elementType: 2,
+                elementSize: 1,
+                data: utf("sheet name")
+            }
+        ]);
+    def d as int init dirOf($b);
+    $b = put($b, $d + 28 + 10, 0, 2);
+    return put($b, $d + 56 + 12, 0, 4);
+}
+
+func testAStrictParseRefusesWhatALenientOneLists() {
+    refused(bentFile(), "PLst 5: a negative number, or a type or element size below 1");
+    def f as File init lenient(bentFile());
+    testing.assertEqual(
+        $f.issues,
+        [
+            "PLst 5: a negative number, or a type or element size below 1",
+            "PLst 5: element type 18 has 1-byte elements, not 0",
+            "PLst 5: 4 bytes of data for 4 elements of 0 bytes",
+            "NAME 1: 10 bytes of data for 0 elements of 1 bytes"
+        ]);
+    testing.assertEqual(tags($f), ["DATA1", "PLst5", "NAME1"]);
+    testing.assertEqual(parse(sampleFile()).issues, []);
+    testing.assertEqual(lenient(sampleFile()).issues, []);
+}
+
+func testIrregularEntriesAreReadAsBytesOrText() {
+    def f as File init lenient(bentFile());
+    testing.assertEqual(ints($f, "DATA", 1), [1, 2, 3]);
+    testing.assertEqual(raw($f, "NAME", 1), utf("sheet name"));
+    testing.assertEqual(text($f, "NAME", 1), "sheet name");
+    testing.assertEqual(text($f, "PLst", 5), "abc");
+    testing.assertThrowsArgs("ints", [$f, "NAME", 1], "abif");
+    def nameValue as Value init tag($f, "NAME", 1);
+    match ($nameValue) {
+        when Raw(r) { testing.assertEqual($r.data, utf("sheet name")); }
+        else { missed("an irregular char tag decoded as values"); }
+    }
+}
+
+func testALenientParseKeepsTheFirstOfARepeatedTag() {
+    def f as File init lenient(build(101, [shortTag("DATA", 1, [1]), shortTag("DATA", 1, [2])]));
+    testing.assertEqual($f.issues, ["DATA 1 appears twice in the directory; the first is used"]);
+    testing.assertEqual(ints($f, "DATA", 1), [1]);
+    testing.assertEqual(len(entries($f)), 1);
+}
+
+func testALenientParseStillRefusesWhatItCannotRead() {
+    def d as int init dirOf(sampleFile());
+    refusedLeniently(binary.make(10), "not an ABIF file");
+    refusedLeniently(put(sampleFile(), $d + 4, -1, 4), "DATA -1: a negative number");
+    refusedLeniently(put(sampleFile(), $d + 16, -1, 4), "DATA 1: a negative data size");
+    refusedLeniently(
+        put(sampleFile(), $d + 16, 600, 4),
+        "DATA 1: its 600 bytes at 128 lie outside the file");
+    def b as bytes init sampleFile();
+    $b[$d + 1] = 9;
+    refusedLeniently($b, "has a tag name that is not printable ASCII");
+}
+
+func testOpenWithReadsAFileLeniently() {
+    def dir as string init fs.makeTempDir("", "abif-test-");
+    defer fs.removeAll($dir);
+    fs.writeBytes($dir + "/sheet", bentFile());
+    testing.assertEqual(len(openWith($dir + "/sheet", ParseOptions{lenient: true}).issues), 4);
+    testing.assertEqual(
+        tags(openWith($dir + "/sheet", ParseOptions{lenient: true})),
+        ["DATA1", "PLst5", "NAME1"]);
+}
+
+func testALenientParseReadsMacLettersInTagNames() {
+    def b as bytes init build(101, [shortTag("SAPr", 1, [7])]);
+    $b[dirOf($b) + 1] = 0x88;
+    refused($b, "has a tag name that is not printable ASCII");
+    def f as File init lenient($b);
+    testing.assertEqual(tags($f), ["S\u0088Pr1"]);
+    testing.assertEqual(ints($f, "S\u0088Pr", 1), [7]);
+    testing.assertEqual(
+        $f.issues,
+        ["S\u0088Pr 1: a tag name that is not printable ASCII (read as ISO 8859-1)"]);
+    $b[dirOf($b) + 1] = 0x7F;
+    refusedLeniently($b, "has a tag name that is not printable ASCII");
+}

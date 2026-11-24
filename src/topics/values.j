@@ -130,6 +130,9 @@ export func typeName(elementType as int) {
 export func tag(f as File, name as string, number as int) {
     def e as Entry init entry($f, $name, $number);
     def t as int init $e.elementType;
+    if (not regular($e) and $t != 18 and $t != 19) {
+        return Value.Raw{elementType: $t, data: dataOf($f, $e)};
+    }
     if ($t == 1 or $t == 3 or $t == 4 or $t == 5) {
         return Value.Ints{values: intsOf($f, $e)};
     }
@@ -140,7 +143,7 @@ export func tag(f as File, name as string, number as int) {
         return Value.Chars{data: dataOf($f, $e)};
     }
     if ($t == 18 or $t == 19) {
-        return Value.Text{value: textOf($f, $e)};
+        return Value.Text{value: utf8($e, textOf($f, $e))};
     }
     if ($t == 10) {
         def dates as list of Date init [];
@@ -202,8 +205,40 @@ export func tag(f as File, name as string, number as int) {
  */
 export func text(f as File, name as string, number as int) {
     def e as Entry init entry($f, $name, $number);
+    return utf8($e, textBytes($f, $e));
+}
+
+/**
+ * A text tag decoded with a named encoding of Jennifer's `encoding` library
+ * instead of UTF-8, such as `"macintosh"` (Mac OS Roman, the text of files
+ * written on classic Mac OS: ABI PRISM 310 and 377 era instruments and
+ * software; in the library from Jennifer 0.28.0) or `"windows-1252"`.
+ *
+ * @param f {File} the file
+ * @param name {string} the tag name
+ * @param number {int} the tag number
+ * @param encoding {string} the encoding's name in the `encoding` library
+ * @return {string} the text
+ * @throws {Error} kind "abif" when the file has no such tag, it holds no text, the text is malformed, or its bytes do not decode in that encoding (or the interpreter does not have it)
+ * @example
+ *   def machine as string init abif.textAs($f, "MCHN", 1, "macintosh");
+ */
+export func textAs(f as File, name as string, number as int, encoding as string) {
+    def e as Entry init entry($f, $name, $number);
+    return decodeAs($e, textBytes($f, $e), $encoding);
+}
+
+/**
+ * The bytes of a text tag's text: a char tag's data, a pString's string, a
+ * cString up to its NUL.
+ *
+ * @param f {File} the file
+ * @param e {Entry} the entry
+ * @return {bytes} the text's bytes
+ */
+func textBytes(f as File, e as Entry) {
     if ($e.elementType == 2) {
-        return utf8($e, dataOf($f, $e));
+        return dataOf($f, $e);
     }
     if ($e.elementType != 18 and $e.elementType != 19) {
         fail(mismatch($e, "text (char, pString or cString)"));
@@ -223,6 +258,7 @@ export func text(f as File, name as string, number as int) {
  */
 export func ints(f as File, name as string, number as int) {
     def e as Entry init entry($f, $name, $number);
+    irregular($e);
     def t as int init $e.elementType;
     if ($t != 1 and $t != 2 and $t != 3 and $t != 4 and $t != 5) {
         fail(mismatch($e, "integers (byte, char, word, short or long)"));
@@ -241,6 +277,7 @@ export func ints(f as File, name as string, number as int) {
  */
 export func floats(f as File, name as string, number as int) {
     def e as Entry init entry($f, $name, $number);
+    irregular($e);
     if ($e.elementType != 7 and $e.elementType != 8) {
         fail(mismatch($e, "floats (float or double)"));
     }
@@ -267,6 +304,26 @@ func mismatch(e as Entry, wanted as string) {
         $e.elementType,
         $why,
         $wanted);
+}
+
+/**
+ * Refuse an irregular entry: its count, element size and type disagree, so
+ * its elements cannot be read safely.
+ *
+ * @param e {Entry} the entry
+ * @throws {Error} kind "abif" for an irregular entry
+ */
+func irregular(e as Entry) {
+    if (not regular($e)) {
+        fail(io.sprintf(
+            "%s %d is irregular (%d elements of %d bytes, type %d, in %d bytes); read its bytes with raw",
+            $e.name,
+            $e.number,
+            $e.count,
+            $e.elementSize,
+            $e.elementType,
+            $e.dataSize));
+    }
 }
 
 /**
@@ -314,15 +371,27 @@ func floatsOf(f as File, e as Entry) {
 }
 
 /**
- * The text of a pString (a length byte, then that many bytes) or a cString
- * (bytes ended by its only NUL).
+ * The text bytes of a pString (a length byte, then that many bytes) or a
+ * cString (bytes ended by its only NUL). An irregular entry (a fixed-size
+ * field of a leniently parsed file) ends at its length byte or first NUL.
  *
  * @param f {File} the file
  * @param e {Entry} the entry
- * @return {string} the text
+ * @return {bytes} the text's bytes
  */
 func textOf(f as File, e as Entry) {
     def d as bytes init dataOf($f, $e);
+    if (not regular($e)) {
+        # a fixed-size field (old files declare a pString as one element of
+        # its full size): the length byte, or the first NUL, ends the text
+        if ($e.elementType == 18 and len($d) > 0 and $d[0] <= len($d) - 1) {
+            return $d[1..1 + $d[0]];
+        }
+        def end as int init binary.indexOf($d, binary.make(1));
+        if ($e.elementType == 19 and $end >= 0) {
+            return $d[..$end];
+        }
+    }
     if ($e.elementType == 18) {
         if (len($d) == 0 or $d[0] != len($d) - 1) {
             fail(io.sprintf(
@@ -331,13 +400,13 @@ func textOf(f as File, e as Entry) {
                 $e.number,
                 len($d)));
         }
-        return utf8($e, $d[1..]);
+        return $d[1..];
     }
     def nul as int init binary.indexOf($d, binary.make(1));
     if (len($d) == 0 or $nul != len($d) - 1) {
         fail(io.sprintf("%s %d: a cString that does not end at its only NUL", $e.name, $e.number));
     }
-    return utf8($e, $d[..$nul]);
+    return $d[..$nul];
 }
 
 /**
@@ -352,5 +421,69 @@ func utf8(e as Entry, d as bytes) {
         return encoding.decode("utf-8", $d);
     } catch (err) {
         fail(io.sprintf("%s %d is not UTF-8 text; read its bytes with raw", $e.name, $e.number));
+    }
+}
+
+/**
+ * A text tag as UTF-8, or as Mac OS Roman (`encoding`'s `"macintosh"`) when
+ * its bytes are not UTF-8: the tolerant decoding of `info` and `dyes`, for
+ * files written on classic Mac OS. Where the interpreter has no
+ * `"macintosh"` codec, non-UTF-8 text is refused as by `text`.
+ *
+ * @param f {File} the file
+ * @param name {string} the tag name
+ * @param number {int} the tag number
+ * @return {string} the text
+ * @throws {Error} kind "abif" when the text is neither UTF-8 nor decodable as Mac OS Roman
+ */
+func textEither(f as File, name as string, number as int) {
+    def e as Entry init entry($f, $name, $number);
+    def d as bytes init textBytes($f, $e);
+    try {
+        return encoding.decode("utf-8", $d);
+    } catch (err) {
+        if (not haveCodec("macintosh")) {
+            fail(io.sprintf(
+                "%s %d is not UTF-8 text, and this interpreter has no Mac OS Roman codec (from Jennifer 0.28.0); read its bytes with raw",
+                $e.name,
+                $e.number));
+        }
+        return decodeAs($e, $d, "macintosh");
+    }
+}
+
+/**
+ * Whether Jennifer's `encoding` library knows a codec.
+ *
+ * @param codec {string} the codec name
+ * @return {bool} true when it decodes a byte
+ */
+func haveCodec(codec as string) {
+    try {
+        encoding.decode($codec, binary.make(1));
+        return true;
+    } catch (err) {
+        return false;
+    }
+}
+
+/**
+ * Text bytes in a named encoding of the `encoding` library.
+ *
+ * @param e {Entry} the entry, for the message
+ * @param d {bytes} the bytes
+ * @param codec {string} the encoding
+ * @return {string} the text
+ * @throws {Error} kind "abif" when the bytes do not decode or the encoding is unknown
+ */
+func decodeAs(e as Entry, d as bytes, codec as string) {
+    try {
+        return encoding.decode($codec, $d);
+    } catch (err) {
+        fail(io.sprintf(
+            "%s %d is not %s text; read its bytes with raw",
+            $e.name,
+            $e.number,
+            $codec));
     }
 }

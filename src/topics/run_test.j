@@ -315,3 +315,28 @@ func testCallsCountBasesInBytes() {
         testing.assertEqual($e.message, "PCON 2 has 1 qualities for 2 bases");
     }
 }
+
+func testInfoReadsMacText() {
+    # an ABI PRISM 310 machine name written on classic Mac OS: Mac OS Roman
+    # 0xA8 is the registered sign, and no UTF-8
+    def f as File init parse(build(
+        101,
+        [
+            pTag("SMPL", 1, "D11F"),
+            TestTag{
+                name: "MCHN",
+                number: 1,
+                elementType: 18,
+                elementSize: 1,
+                data: bytesOf([4, 0x33, 0x31, 0x30, 0xA8])
+            },
+            pTag("DyeN", 1, "6-FAM")
+        ]));
+    if (haveMacintosh()) {
+        testing.assertEqual(info($f).instrument, "310®");
+        testing.assertEqual(info($f).sample, "D11F");
+    } else {
+        testing.assertThrowsArgs("info", [$f], "abif");
+    }
+    testing.assertEqual(dyes($f)[0].name, "6-FAM");
+}

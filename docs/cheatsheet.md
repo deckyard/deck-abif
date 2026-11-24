@@ -26,6 +26,8 @@ characters, such as `DATA`) and a `number`.
 |---|---|---|
 | `parse(data)` | `File` | check the header and every directory entry against `data`, then index them |
 | `open(path)` | `File` | `parse` of a file read from disk |
+| `parseWith(data, opts)` | `File` | `parse` with `ParseOptions`; lenient: accept rule-breaking entries, list them in `File.issues` |
+| `openWith(path, opts)` | `File` | `parseWith` of a file read from disk |
 | `tags(f)` | `list of string` | every tag as `NAME` + number (`DATA9`, `PBAS2`), in file order |
 | `has(f, name, number)` | `bool` | whether the directory lists a tag |
 | `entries(f)` | `list of Entry` | the directory, in file order |
@@ -38,6 +40,7 @@ characters, such as `DATA`) and a `number`.
 |---|---|---|
 | `tag(f, name, number)` | `Value` | a tag decoded by its element type |
 | `text(f, name, number)` | `string` | a `pString`, `cString` or `char` tag as UTF-8 text, untrimmed |
+| `textAs(f, name, number, encoding)` | `string` | the same text decoded with a named `encoding` codec, such as `"macintosh"` (Mac OS Roman, Jennifer 0.28.0 on) |
 | `ints(f, name, number)` | `list of int` | a `byte`, `char` (0 to 255), `word`, `short` or `long` tag |
 | `floats(f, name, number)` | `list of float` | a `float` or `double` tag |
 | `typeName(elementType)` | `string` | `short`, `pString`, `user`, ...; `unknown` for a code the specification does not name |
@@ -73,6 +76,13 @@ deck's structs and is not rebuilt each time it is passed to the deck;
 | `offsets as list of int` | each entry's data offset |
 | `index as map of string to int` | the position of each tag in those lists, keyed `NAME` + number |
 | `data as bytes` | the whole file |
+| `issues as list of string` | the rules a leniently parsed file breaks, one message each; empty after a strict parse |
+
+### `ParseOptions`
+
+| Field | Meaning |
+|---|---|
+| `lenient as bool` | accept entries with an element type or size below 1, an element size their type does not have, a data size other than count x element size, a repeated tag (the first is kept), or a tag name with bytes over 126 (read as ISO 8859-1), and list them in `File.issues`; the header, control characters in names, negative numbers and data ranges are still checked |
 
 ### `Entry`
 

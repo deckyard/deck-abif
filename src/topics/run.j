@@ -153,7 +153,7 @@ export func dyes(f as File) {
     for (def i in 1..$count + 1) {
         def d as Dye init Dye{number: $i, name: "", wavelength: 0};
         if (has($f, "DyeN", $i) and isText(entry($f, "DyeN", $i))) {
-            $d.name = text($f, "DyeN", $i);
+            $d.name = textEither($f, "DyeN", $i);
         }
         $d.wavelength = oneInt($f, "DyeW", $i);
         $out[] = $d;
@@ -293,7 +293,7 @@ func field(f as File, name as string) {
     if (not has($f, $name, 1) or not isText(entry($f, $name, 1))) {
         return "";
     }
-    def s as string init text($f, $name, 1);
+    def s as string init textEither($f, $name, 1);
     while ($s != "" and ($s[len($s) - 1..] == " " or $s[len($s) - 1..] == "\0")) {
         $s = $s[..len($s) - 1];
     }

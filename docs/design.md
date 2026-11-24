@@ -5,7 +5,7 @@
 
 ## Scope
 
-The deck reads Applied Biosystems ABIF files, the container their capillary
+The deck reads Applied Biosystems™ ABIF files, the container their capillary
 sequencers write: Sanger traces (`.ab1`), fragment-analysis runs (`.fsa`)
 and 3500-series HID runs (`.hid`). It has three parts:
 
@@ -50,6 +50,27 @@ It deliberately stops at reading:
   `cString` exactly one NUL, at its end; text must be UTF-8 (`raw` gives the
   bytes of anything else). A malformed file fails at `parse`, not at some
   later read.
+- **A lenient parse, opt-in.** Files of the ABI PRISM 310 / 377 era bend
+  the rules: 1990s sample files declare a `pString` as one 19-byte element,
+  GeneScan projects have entries of element size 0, 310 sample sheets an
+  entry of 0 elements holding 327 bytes, 310 injection lists tag names with
+  Mac OS Roman letters (`S` `0x88` `Pr`). `parseWith` with
+  `ParseOptions{lenient: true}` accepts such entries and lists every broken
+  rule in `File.issues` (the messages a strict parse would throw), so
+  nothing passes silently. It still refuses what cannot be read safely: a
+  bad header, an unreadable tag name, negative numbers, data outside the
+  file. A repeated tag keeps the first; a name with bytes over 126 is read
+  byte for byte as ISO 8859-1, so names stay distinct and lookups exact. The typed readers refuse an
+  irregular entry (`ints`, `floats`; `tag` returns it as `Value.Raw`),
+  while text is read from the bytes present: a fixed-size `pString` up to
+  its length byte, a fixed-size `cString` up to its first NUL. `parse`
+  stays strict and unchanged.
+- **Text encodings from the library.** Files written on classic Mac OS
+  hold Mac OS Roman text (`MCHN` "ABI PRISM® 310"). `text` stays strict
+  UTF-8; `textAs` decodes with any codec of Jennifer's `encoding` library,
+  and `info` and `dyes` fall back from UTF-8 to `"macintosh"`. That codec
+  ships with Jennifer 0.28.0 (M29); on 0.27.0 such a field is refused as
+  before. The deck carries no character table of its own.
 - **The header's own entry is read by hand.** Its data size is the space
   reserved for the directory (3584 bytes for 113 entries in a 310 file), not
   `count` times 28, so the generic entry check would refuse it.
@@ -111,7 +132,7 @@ copy of `src/`, as `jvc` runs overlays; they cover the element types,
 every refusal of `parse`, lookups, the readers and the `"limit"` cap.
 `src/topics/samples/samples_test.j` reads the files in `testdata/`
 (Biopython's `.ab1` / `.fsa` samples under the Biopython License, and one
-public-domain OSIRIS GlobalFiler `.hid`) and checks them against
+public-domain OSIRIS GlobalFiler™ `.hid`) and checks them against
 Biopython's expected values; it returns early when `testdata/` is missing.
 
 - **Biopython 1.88** (2026-11-14), nine sample files, 1025 tags: the only
@@ -133,7 +154,12 @@ Biopython's expected values; it returns early when `testdata/` is missing.
 - HID traces and peak tables are encrypted and stay unreadable; for HID
   runs, only metadata is available.
 - A file with a comment or other text field that is not UTF-8 is read, but
-  `text` on that field throws; `raw` returns its bytes.
+  `text` on that field throws; `textAs` decodes it with a named encoding,
+  `raw` returns its bytes. `info` and `dyes` read Mac OS Roman fields only
+  on interpreters with the `"macintosh"` codec (0.28.0 on).
+- The meaning of the user-defined structures in GeneScan and Data
+  Collection documents (types 1024 and up) is out of scope: the deck gives
+  their bytes.
 - The 0.1.0 tag exists; its registry publish failed on 2026-11-14 (the
   registry did not answer) and is to be retried.
 

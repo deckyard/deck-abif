@@ -278,3 +278,62 @@ func testAnEmptyCStringIsRefused() {
         }
     }
 }
+
+/**
+ * Whether this interpreter's `encoding` library has Mac OS Roman
+ * (`"macintosh"`, from Jennifer 0.28.0).
+ *
+ * @return {bool} true when it decodes
+ */
+func haveMacintosh() {
+    try {
+        encoding.decode("macintosh", binary.make(1));
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+func testFixedSizeStringsOfOldFiles() {
+    # a pString and a cString declared as one element of their field's full
+    # size, as 1990s sample files do (APFN: 19 bytes)
+    def p as bytes init binary.concat(pstr("1N"), binary.make(16));
+    def c as bytes init binary.concat(utf("ab"), binary.make(6));
+    def tags as list of TestTag init [
+        TestTag{name: "APFN", number: 1, elementType: 18, elementSize: 19, data: $p},
+        TestTag{name: "TEXT", number: 1, elementType: 19, elementSize: 8, data: $c}
+    ];
+    refused(build(101, $tags), "APFN 1: element type 18 has 1-byte elements, not 19");
+    def f as File init lenient(build(101, $tags));
+    testing.assertEqual(text($f, "APFN", 1), "1N");
+    testing.assertEqual(text($f, "TEXT", 1), "ab");
+    def apfnValue as Value init tag($f, "APFN", 1);
+    match ($apfnValue) {
+        when Text(t) { testing.assertEqual($t.value, "1N"); }
+        else { missed("a fixed-size pString not read as text"); }
+    }
+}
+
+func testTextInAnotherEncoding() {
+    # "A" and Mac OS Roman 0xA8, the registered sign; 0xA8 alone is no UTF-8
+    def f as File init parse(build(
+        101,
+        [
+            TestTag{
+                name: "MCHN",
+                number: 1,
+                elementType: 18,
+                elementSize: 1,
+                data: bytesOf([2, 0x41, 0xA8])
+            }
+        ]));
+    testing.assertThrowsArgs("text", [$f, "MCHN", 1], "abif");
+    testing.assertEqual(textAs($f, "MCHN", 1, "windows-1252"), "A¨");
+    testing.assertThrowsArgs("textAs", [$f, "MCHN", 1, "utf-8"], "abif");
+    testing.assertThrowsArgs("textAs", [$f, "MCHN", 1, "no-such-encoding"], "abif");
+    if (haveMacintosh()) {
+        testing.assertEqual(textAs($f, "MCHN", 1, "macintosh"), "A®");
+    } else {
+        testing.assertThrowsArgs("textAs", [$f, "MCHN", 1, "macintosh"], "abif");
+    }
+}
