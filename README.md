@@ -4,11 +4,18 @@
 [![Documentation](https://img.shields.io/badge/docs-github%20pages-blue)](https://deckyard.github.io/deck-abif/)
 [![release](https://img.shields.io/github/v/release/deckyard/deck-abif)](https://github.com/deckyard/deck-abif/releases/latest)
 
-Read Applied Biosystems ABIF files in a [Jennifer](https://jennifer-lang.dev/)
+Read Applied Biosystems™ ABIF files in a [Jennifer](https://jennifer-lang.dev/)
 program: Sanger traces (`.ab1`), fragment-analysis runs (`.fsa`) and 3500
 HID runs (`.hid`). Every element type, raw and analysed traces per dye, dyes,
 base calls with qualities and peak locations, and the sample and run
 metadata. The directory is checked against the file before anything is read.
+
+ABIF is a publicly documented file format: Applied Biosystems publishes
+the "ABIF File Format Specification" for software that reads its
+instruments' files, and this deck implements that specification. What the
+specification leaves undocumented - the element types 3500 HID files
+encrypt, and user-defined structures (types 1024 and up) - is given as raw
+bytes, not interpreted.
 
 **[Documentation](https://deckyard.github.io/deck-abif/)**
 
@@ -36,8 +43,11 @@ io.printf("%s (%s): %d bases\n", $i.sample, $i.well, len($c.bases));
 
 Jennifer 0.27.0 or newer. No capabilities.
 
-The traces, peak tables and most dye names of a 3500 HID file are encrypted;
-the deck reads that file's metadata, not its signal.
+`.ab1` and `.fsa` files read in full: traces, peak tables, base calls and
+metadata. A `.hid` file reads in full only where its traces and peak tables
+are plain data, element type 4 (`short`), as in an `.fsa`. In the usual 3500
+HID file they are encrypted (element types 28 to 34): the deck reads that
+file's metadata, not its signal.
 
 ## Development
 
@@ -47,6 +57,16 @@ jennifer test src/abif_test.j        # the test overlay
 tools/check-docs.sh                  # docs against the code
 tools/pack.sh dist                   # build the release archive
 ```
+
+## Trademarks
+
+Applied Biosystems™, GeneScan™, GlobalFiler™, LIZ™ and POP-7™ are trademarks
+of Thermo Fisher Scientific Inc. or its subsidiaries. ABI PRISM™ and other
+product, dye and kit names that appear as values in the files this deck
+reads (such as `6-FAM` or `GS600LIZ`) may be trademarks of their respective
+owners. They are used only to describe those files. This deck is an
+independent project, not affiliated with, sponsored or endorsed by Thermo
+Fisher Scientific Inc.
 
 ## Licence
 
