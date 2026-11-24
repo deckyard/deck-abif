@@ -67,4 +67,8 @@ element types 28 to 34, which the published format does not define. Their
 bytes look random, their sizes are whole 8-byte blocks, and equal plaintexts
 give equal blocks: they are encrypted. `tag` returns them as `Raw`, the trace
 readers refuse them, and `dyes` and `info` leave their names `""`. Reading
-the signal of a HID run needs Applied Biosystems' software.
+the signal of an encrypted HID run needs Applied Biosystems™' software.
+
+Where a `.hid` holds its traces and peak tables as plain data, element type
+4 (`short`) as in an `.fsa`, the trace readers and `ints` read them as they
+read an `.fsa`.

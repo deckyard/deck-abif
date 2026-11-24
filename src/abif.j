@@ -3,7 +3,7 @@
 # pragma-jennifer-version: >=0.27.0
 
 /**
- * Read Applied Biosystems ABIF files, the container their capillary
+ * Read Applied Biosystems™ ABIF files, the container their capillary
  * sequencers write: Sanger traces (`.ab1`), fragment-analysis runs (`.fsa`)
  * and 3500-series HID runs (`.hid`). The layout follows Applied Biosystems'
  * "ABIF File Format Specification" (2009).

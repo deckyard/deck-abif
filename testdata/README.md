@@ -10,11 +10,11 @@ the rest build their ABIF files in code.
 
 | File | Instrument, run | From | Licence |
 |---|---|---|---|
-| `310.ab1` | ABI PRISM 310, Sanger | Biopython `Tests/Abi/` | Biopython License Agreement, in `LICENSE.biopython.rst` |
+| `310.ab1` | ABI PRISM™ 310, Sanger | Biopython `Tests/Abi/` | Biopython License Agreement, in `LICENSE.biopython.rst` |
 | `3730.ab1` | 3730xl, Sanger | Biopython `Tests/Abi/` | Biopython License Agreement |
 | `test.fsa` | 3100, fragment analysis (AFLP) | Biopython `Tests/Abi/` | Biopython License Agreement |
 | `fake.ab1` | not ABIF: 26 bytes of text | Biopython `Tests/Abi/` | Biopython License Agreement |
-| `GF_8_FTA_H01_08.hid` | 3500, GlobalFiler HID run | NCBI OSIRIS `docs/TestAnalysis/GlobalFilerHID/` | public domain: OSIRIS is a United States Government Work (NCBI's Public Domain Notice) |
+| `GF_8_FTA_H01_08.hid` | 3500, GlobalFiler™ HID run | NCBI OSIRIS `docs/TestAnalysis/GlobalFilerHID/` | public domain: OSIRIS is a United States Government Work (NCBI's Public Domain Notice) |
 
 Sources: <https://github.com/biopython/biopython/tree/master/Tests/Abi> and
 <https://github.com/ncbi/osiris>, fetched 2026-11-13, unchanged.

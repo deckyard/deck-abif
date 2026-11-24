@@ -87,7 +87,7 @@ for (def d in abif.dyes($f)) {
 ## `.hid`: a 3500 HID run
 
 The 3500 series' human-identification format: ABIF version 300, six dyes
-(the sample is a GlobalFiler run, size standard `GS600LIZ`). It adds the
+(the sample is a GlobalFiler™ run, size standard `GS600LIZ`). It adds the
 results of the instrument's own sizing and the record of every consumable:
 
 - `DATA` 1-4 and 105-106 (raw), 9-12 and 205-206 (analysed), `DATA` 5-8
@@ -116,4 +116,8 @@ def i as abif.Info init abif.info($f);
 io.printf("%s on %s, size standard %s\n", $i.sample, $i.instrument, $i.sizeStandard);
 ```
 
-Reading the signal of a HID run needs Applied Biosystems' software.
+A `.hid` whose traces and peak tables are plain data - element type 4
+(`short`), as in an `.fsa` - reads like an `.fsa`: `rawTrace`,
+`analysedTrace` and `ints` return them. `tag` names the type of any entry,
+so one look at `DATA 9` tells which kind a file is. Reading the signal of
+an encrypted HID run needs Applied Biosystems™' software.

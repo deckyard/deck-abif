@@ -3,8 +3,16 @@
 
 # The format
 
-The layout follows Applied Biosystems' "ABIF File Format Specification"
-(2009). Every number is big-endian.
+ABIF is a publicly documented file format. The layout follows Applied
+Biosystems™' "ABIF File Format Specification" (2009), which Applied
+Biosystems publishes for developers of software that reads its files.
+Every number is big-endian.
+
+The specification documents the container (header, directory, element
+types) and the common tags. It does not document the element types 28 to
+34 of 3500 HID files (encrypted), the layout of user-defined structures
+(types 1024 and up) or every instrument- and software-specific tag; the
+deck reads those as raw bytes.
 
 ## Header and directory
 
